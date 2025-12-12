@@ -19,6 +19,20 @@ yunyi_end="重启服务器会导致数据丢失，为了稳定运行请尽可能
 
 FIREWALL_SAVE_CMD="service iptables save"
 
+get_ipv4(){
+    local ip=""
+    if command -v curl >/dev/null 2>&1; then
+        ip=$(curl -4 -s icanhazip.com || curl -4 -s ipinfo.io/ip || curl -4 -s ifconfig.me)
+    fi
+    if [ -z "$ip" ]; then
+        ip=$(hostname -I | tr ' ' '\n' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1)
+    fi
+    echo "$ip"
+}
+refresh_server_ip(){
+    SERVER_IP="$(get_ipv4)"
+}
+
 #开始菜单
 start_menu(){
   clear
@@ -78,6 +92,7 @@ check_sys_clinet(){
     nohup ./client >> /dev/null 2>&1 &
     kuaijiemingling
 	clear
+    refresh_server_ip
     echo -e "控制端安装完成，请使用浏览器打开网址进行配置"
     echo -e ${address}
 	echo -e ${Green_font_prefix}"http://${SERVER_IP}:8080/resources/add_client.html"${Font_color_suffix}
@@ -96,6 +111,7 @@ check_sys_natclinet(){
     nohup ./client >> /dev/null 2>&1 &
 	kuaijiemingling
 	clear
+    refresh_server_ip
     echo -e "控制端安装完成，请使用浏览器打开网址进行配置"
 	echo -e ${address}
     echo -e ${Green_font_prefix}"http://${SERVER_IP}:${portzhuanfa}/resources/add_client.html"${Font_color_suffix}
@@ -109,6 +125,7 @@ install_server(){
     nohup ./server >> /dev/null 2>&1 &
     kuaijiemingling
 	clear
+    refresh_server_ip
 	echo -e "服务端安装完成，请使用浏览器打开网址进行配置"
 	echo -e ${address}
     echo -e ${Green_font_prefix}"http://${SERVER_IP}:8081/resources/add_server.html"${Font_color_suffix}
@@ -179,6 +196,7 @@ OnWeb(){
 	echo -e "防火墙设置完成"
 	echo -e ${Green_font_prefix}"已开启web访问"${Font_color_suffix}
 	echo -e "如果客户端使用NAT机器，自行将8080替换成你自己的端口"
+    refresh_server_ip
 	echo -e 客户端 ${Green_font_prefix}"http://${SERVER_IP}:8080/resources/add_client.html"${Font_color_suffix}
 	echo -e 服务端 ${Green_font_prefix}"http://${SERVER_IP}:8080/resources/add_client.html"${Font_color_suffix}
 }
@@ -188,7 +206,7 @@ OffWeb(){
 	iptables -D INPUT -p tcp -m tcp --dport 8081 -j DROP
     iptables -D INPUT -p tcp -m tcp --dport 8080 -j DROP
 	iptables -A INPUT -p tcp -m tcp --dport 8080 -j DROP
-    iptables -A INPUT -p tcp -m tcp --dport 8081 -j DROP
+	iptables -A INPUT -p tcp -m tcp --dport 8081 -j DROP
 	clear
 	echo -e "防火墙设置完成"
 	echo -e ${hongsewenzi}"已关闭web访问"${hongsewenzi}
@@ -228,10 +246,6 @@ echo "alias vnet='bash /root/vnet.sh'" >> ~/.bashrc
 source ~/.bashrc
 }
 
-#获取服务器IP
-rm -rf /root/.ip.txt
-curl -s 'icanhazip.com' > /root/.ip.txt
-SERVER_IP=`sed -n '1p' /root/.ip.txt`
 #这里开始
 cd /root/
 start_menu
